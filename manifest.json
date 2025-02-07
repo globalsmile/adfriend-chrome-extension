@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "AdFriend",
+  "version": "1.0",
+  "description": "Replace ad elements with customizable, positive content widgets.",
+  "permissions": ["storage", "scripting"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "options/index.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["contentScript.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
