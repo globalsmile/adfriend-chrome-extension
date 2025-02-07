@@ -1,11 +1,14 @@
 // contentScript.js
 
 (() => {
+  // Base URL for your backend API endpoints.
+  const API_BASE_URL = 'https://your-backend-domain.com';
+
   // Selectors to detect ad elements.
   const adSelectors = [".ad", ".ads", "[id^='ad-']", "[class*='ad-']", ".sponsored"];
 
   /***************************************
-   * GAMIFICATION UTILITY (existing code)
+   * GAMIFICATION & ANALYTICS UTILITY
    ***************************************/
   function addPoints(points) {
     chrome.storage.local.get({ points: 0 }, (result) => {
@@ -20,6 +23,52 @@
         span.textContent = "Points: " + result.points;
       });
     });
+  }
+
+  // Logs an analytics event by sending it to the backend API.
+  function logAnalytics(eventType) {
+    const data = {
+      action: eventType,
+      timestamp: new Date().toISOString()
+    };
+
+    fetch(`${API_BASE_URL}/analytics`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to send analytics event');
+        }
+        console.log(`Analytics event sent: ${eventType}`);
+      })
+      .catch((error) => {
+        console.error('Error sending analytics event:', error);
+      });
+  }
+
+  // (Optional) Sends user feedback to the backend.
+  function sendFeedback(feedbackMessage) {
+    const data = {
+      feedback: feedbackMessage,
+      timestamp: new Date().toISOString()
+    };
+
+    fetch(`${API_BASE_URL}/feedback`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error('Failed to send feedback');
+        }
+        console.log('Feedback sent successfully.');
+      })
+      .catch((error) => {
+        console.error('Error sending feedback:', error);
+      });
   }
 
   /***************************************
@@ -93,9 +142,8 @@
     }
 
     // Schedule a periodic reminder notification (e.g., every 60 seconds).
-    const notificationInterval = 60000; // 60,000 ms = 60 sec.
+    const notificationInterval = 60000; // 60 sec.
     const notificationTimer = setInterval(() => {
-      // You can change the message based on context or randomize it.
       showNotification("Don't forget to check today's challenge!");
     }, notificationInterval);
 
@@ -105,7 +153,7 @@
     });
 
     /***************************************
-     * CONTENT UPDATE FUNCTION (existing modes)
+     * CONTENT UPDATE FUNCTION
      ***************************************/
     function updateContent() {
       const type = widgetSelect.value;
@@ -139,7 +187,7 @@
             completeButton.textContent = "Complete";
             completeButton.addEventListener("click", () => {
               li.style.textDecoration = "line-through";
-              addPoints(5); // Award points.
+              addPoints(5); // Award points for completing a task.
             });
             li.appendChild(completeButton);
             list.appendChild(li);
@@ -189,8 +237,6 @@
             contentContainer.appendChild(wordP);
           });
       }
-
-      // Refresh points display after updating.
       updatePointsDisplay();
     }
 
@@ -202,13 +248,15 @@
     refreshButton.addEventListener("click", () => {
       updateContent();
       addPoints(1);
+      logAnalytics("refresh"); // Send refresh event.
       widget.classList.remove("fade-in");
-      void widget.offsetWidth; // force reflow for animation
+      void widget.offsetWidth; // Force reflow for animation.
       widget.classList.add("fade-in");
       showNotification("Content refreshed!");
     });
 
     dismissButton.addEventListener("click", () => {
+      logAnalytics("dismiss"); // Send dismiss event.
       widget.classList.add("fade-out");
       setTimeout(() => widget.remove(), 500);
     });
@@ -219,6 +267,7 @@
       const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
       window.open(tweetUrl, "_blank");
       addPoints(2);
+      logAnalytics("share"); // Send share event.
       showNotification("Thanks for sharing!");
     });
 
