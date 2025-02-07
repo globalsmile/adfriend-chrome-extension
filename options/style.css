@@ -1,19 +1,32 @@
+/* options/style.css */
 body {
   font-family: Arial, sans-serif;
   padding: 20px;
 }
 
 .app {
-  max-width: 400px;
+  max-width: 500px;
   margin: auto;
 }
 
-input[type="text"] {
+.form-group {
+  margin-bottom: 20px;
+}
+
+label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+textarea {
   width: 100%;
   padding: 8px;
-  margin-top: 5px;
-  margin-bottom: 10px;
   box-sizing: border-box;
+  font-family: Arial, sans-serif;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 button {
@@ -21,6 +34,7 @@ button {
   background-color: #007bff;
   color: #fff;
   border: none;
+  border-radius: 4px;
   cursor: pointer;
 }
 
