@@ -1,13 +1,12 @@
 // contentScript.js
 
 (() => {
-  // Selectors to detect ad elements
+  // Selectors to detect ad elements.
   const adSelectors = [".ad", ".ads", "[id^='ad-']", "[class*='ad-']", ".sponsored"];
 
   /***************************************
-   * GAMIFICATION UTILITY
+   * GAMIFICATION UTILITY (existing code)
    ***************************************/
-  // Adds points to the user's score
   function addPoints(points) {
     chrome.storage.local.get({ points: 0 }, (result) => {
       const newPoints = result.points + points;
@@ -15,7 +14,6 @@
     });
   }
 
-  // Updates all points displays (each widget might show the points)
   function updatePointsDisplay() {
     document.querySelectorAll(".adfriend-points").forEach((span) => {
       chrome.storage.local.get({ points: 0 }, (result) => {
@@ -25,44 +23,45 @@
   }
 
   /***************************************
-   * DYNAMIC WIDGET CREATION
+   * DYNAMIC WIDGET WITH NOTIFICATIONS
    ***************************************/
   function createDynamicWidget() {
-    // Create main container and add entry animation class
+    // Create main container and add entry animation.
     const widget = document.createElement("div");
     widget.className = "adfriend-widget fade-in";
 
-    // Create header with widget type selector and points display
+    // Create header: widget type selector & points display.
     const header = document.createElement("div");
     header.className = "adfriend-header";
 
-    // Create a select element for widget mode
     const widgetSelect = document.createElement("select");
     widgetSelect.className = "adfriend-widget-type";
-    const widgetOptions = ["Motivational Quote", "To-Do List", "Breathing Exercise", "Word of the Day"];
-    widgetOptions.forEach((option) => {
+    ["Motivational Quote", "To-Do List", "Breathing Exercise", "Word of the Day"].forEach((option) => {
       const opt = document.createElement("option");
       opt.value = option;
       opt.textContent = option;
       widgetSelect.appendChild(opt);
     });
 
-    // Create points display
     const pointsDisplay = document.createElement("span");
     pointsDisplay.className = "adfriend-points";
     pointsDisplay.textContent = "Points: 0";
 
-    // Assemble header
     header.appendChild(widgetSelect);
     header.appendChild(pointsDisplay);
     widget.appendChild(header);
 
-    // Create content container (will be populated based on mode)
+    // Create a notification container (for in-widget notifications).
+    const notificationContainer = document.createElement("div");
+    notificationContainer.className = "adfriend-notification";
+    widget.appendChild(notificationContainer);
+
+    // Create content container.
     const contentContainer = document.createElement("div");
     contentContainer.className = "adfriend-content";
     widget.appendChild(contentContainer);
 
-    // Create button container with Refresh, Dismiss, and Share buttons
+    // Create button container with Refresh, Dismiss, and Share.
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "adfriend-buttons";
 
@@ -81,15 +80,38 @@
     widget.appendChild(buttonContainer);
 
     /***************************************
-     * CONTENT UPDATE FUNCTION
+     * NOTIFICATIONS & REMINDERS FEATURE
      ***************************************/
-    // Updates contentContainer based on the selected widget type
+    // Function to show an in-widget notification.
+    function showNotification(message) {
+      notificationContainer.textContent = message;
+      notificationContainer.classList.add("show");
+      // Automatically hide the notification after 5 seconds.
+      setTimeout(() => {
+        notificationContainer.classList.remove("show");
+      }, 5000);
+    }
+
+    // Schedule a periodic reminder notification (e.g., every 60 seconds).
+    const notificationInterval = 60000; // 60,000 ms = 60 sec.
+    const notificationTimer = setInterval(() => {
+      // You can change the message based on context or randomize it.
+      showNotification("Don't forget to check today's challenge!");
+    }, notificationInterval);
+
+    // Ensure the notification timer is cleared if the widget is dismissed.
+    widget.addEventListener("remove", () => {
+      clearInterval(notificationTimer);
+    });
+
+    /***************************************
+     * CONTENT UPDATE FUNCTION (existing modes)
+     ***************************************/
     function updateContent() {
       const type = widgetSelect.value;
-      contentContainer.innerHTML = ""; // Clear previous content
+      contentContainer.innerHTML = ""; // Clear previous content.
 
       if (type === "Motivational Quote") {
-        // Fetch a random quote using the Quotable API
         fetch("https://api.quotable.io/random")
           .then((response) => response.json())
           .then((data) => {
@@ -97,13 +119,12 @@
             quoteP.textContent = data.content || "Keep pushing forward!";
             contentContainer.appendChild(quoteP);
           })
-          .catch((err) => {
+          .catch(() => {
             const quoteP = document.createElement("p");
             quoteP.textContent = "Believe in yourself!";
             contentContainer.appendChild(quoteP);
           });
       } else if (type === "To-Do List") {
-        // Build a mini to-do list interface
         const input = document.createElement("input");
         input.placeholder = "Add a task";
         const addButton = document.createElement("button");
@@ -114,12 +135,11 @@
           if (input.value.trim() !== "") {
             const li = document.createElement("li");
             li.textContent = input.value;
-            // Add a "Complete" button for each task
             const completeButton = document.createElement("button");
             completeButton.textContent = "Complete";
             completeButton.addEventListener("click", () => {
               li.style.textDecoration = "line-through";
-              addPoints(5); // Award 5 points for completing a task
+              addPoints(5); // Award points.
             });
             li.appendChild(completeButton);
             list.appendChild(li);
@@ -131,7 +151,6 @@
         contentContainer.appendChild(addButton);
         contentContainer.appendChild(list);
       } else if (type === "Breathing Exercise") {
-        // Show breathing exercise instructions and a start button
         const instruction = document.createElement("p");
         instruction.textContent = "Follow the pattern: Inhale (4 sec), Hold (4 sec), Exhale (4 sec).";
         contentContainer.appendChild(instruction);
@@ -139,7 +158,7 @@
         const startButton = document.createElement("button");
         startButton.textContent = "Start Exercise";
         startButton.addEventListener("click", () => {
-          let countdown = 12; // Total exercise duration (in seconds)
+          let countdown = 12;
           instruction.textContent = "Exercise started...";
           const interval = setInterval(() => {
             countdown--;
@@ -147,13 +166,12 @@
             if (countdown <= 0) {
               clearInterval(interval);
               instruction.textContent = "Great job! Exercise complete.";
-              addPoints(10); // Award 10 points for finishing exercise
+              addPoints(10);
             }
           }, 1000);
         });
         contentContainer.appendChild(startButton);
       } else if (type === "Word of the Day") {
-        // Simulate a word-of-the-day by fetching a random quote and using its first word
         fetch("https://api.quotable.io/random")
           .then((response) => response.json())
           .then((data) => {
@@ -165,48 +183,46 @@
             contentContainer.appendChild(wordP);
             contentContainer.appendChild(defP);
           })
-          .catch((err) => {
+          .catch(() => {
             const wordP = document.createElement("p");
             wordP.textContent = "Word of the Day: Serendipity";
             contentContainer.appendChild(wordP);
           });
       }
 
-      // Refresh the points display after updating content
+      // Refresh points display after updating.
       updatePointsDisplay();
     }
 
     /***************************************
      * EVENT BINDINGS
      ***************************************/
-    // When the widget type changes, update content.
     widgetSelect.addEventListener("change", updateContent);
 
-    // Refresh button re-loads current widget content and awards 1 point.
     refreshButton.addEventListener("click", () => {
       updateContent();
       addPoints(1);
       widget.classList.remove("fade-in");
-      void widget.offsetWidth; // force reflow to restart animation
+      void widget.offsetWidth; // force reflow for animation
       widget.classList.add("fade-in");
+      showNotification("Content refreshed!");
     });
 
-    // Dismiss button triggers fade-out animation and removes widget.
     dismissButton.addEventListener("click", () => {
       widget.classList.add("fade-out");
       setTimeout(() => widget.remove(), 500);
     });
 
-    // Share button opens a pre-populated tweet and awards 2 points.
     shareButton.addEventListener("click", () => {
       const contentText = contentContainer.textContent;
       const tweetText = encodeURIComponent(`Check out this content: "${contentText}"`);
       const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
       window.open(tweetUrl, "_blank");
       addPoints(2);
+      showNotification("Thanks for sharing!");
     });
 
-    // Initial content load
+    // Initial content load.
     updateContent();
     updatePointsDisplay();
 
@@ -227,9 +243,7 @@
   function processNode(node) {
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     adSelectors.forEach((selector) => {
-      if (node.matches(selector)) {
-        replaceAdElement(node);
-      }
+      if (node.matches(selector)) replaceAdElement(node);
     });
     adSelectors.forEach((selector) => {
       node.querySelectorAll(selector).forEach(replaceAdElement);
@@ -268,6 +282,19 @@
       justify-content: space-between;
       align-items: center;
       margin-bottom: 10px;
+    }
+    .adfriend-notification {
+      font-size: 13px;
+      color: #fff;
+      background: #28a745;
+      padding: 5px;
+      margin: 5px 0;
+      border-radius: 3px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+    .adfriend-notification.show {
+      opacity: 1;
     }
     .adfriend-content {
       margin-bottom: 10px;
