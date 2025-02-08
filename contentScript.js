@@ -2,7 +2,7 @@
 
 (() => {
   // Base URL for your backend API endpoints.
-  const API_BASE_URL = 'https://your-backend-domain.com';
+  const API_BASE_URL = 'https://adfriend-chrome-extension-backend.onrender.com';
 
   // Selectors to detect ad elements.
   const adSelectors = [".ad", ".ads", "[id^='ad-']", "[class*='ad-']", ".sponsored"];
