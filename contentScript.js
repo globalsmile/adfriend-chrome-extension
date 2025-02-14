@@ -160,14 +160,24 @@
       contentContainer.innerHTML = ""; // Clear previous content.
 
       if (type === "Motivational Quote") {
-        fetch("https://api.quotable.io/quotes/random")
-          .then((response) => response.json())
+        fetch("https://api.quotable.io/random")
+          .then((response) => {
+            if (!response.ok) {
+              // If the response status is not OK, throw an error.
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
           .then((data) => {
+            console.log("Fetched quote data:", data); // Debug log
             const quoteP = document.createElement("p");
-            quoteP.textContent = data.content || "Keep pushing forward!";
+            // Use the API response if available; otherwise, a fallback message.
+            quoteP.textContent = data.content ? data.content : "Keep pushing forward!";
             contentContainer.appendChild(quoteP);
           })
-          .catch(() => {
+          .catch((err) => {
+            console.error("Error fetching quote:", err);
+            // Only use the fallback if an error occurs.
             const quoteP = document.createElement("p");
             quoteP.textContent = "Believe in yourself!";
             contentContainer.appendChild(quoteP);
