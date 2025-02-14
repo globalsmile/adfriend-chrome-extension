@@ -2,9 +2,12 @@
   "manifest_version": 3,
   "name": "AdFriend",
   "version": "1.0",
-  "description": "Replace ad elements with customizable, positive content widgets.",
-  "permissions": ["storage", "scripting"],
-  "host_permissions": ["<all_urls>"],
+  "description": "Replace ad elements with positive content widgets.",
+  "permissions": ["storage", "scripting", "activeTab"],
+  "host_permissions": [
+    "<all_urls>",
+    "https://api.quotable.io/*"
+  ],
   "background": {
     "service_worker": "background.js"
   },
