@@ -160,7 +160,7 @@
       contentContainer.innerHTML = ""; // Clear previous content.
 
       if (type === "Motivational Quote") {
-        fetch("https://api.quotable.io/random")
+        fetch("https://api.quotable.io/quotes/random")
           .then((response) => response.json())
           .then((data) => {
             const quoteP = document.createElement("p");
@@ -220,7 +220,7 @@
         });
         contentContainer.appendChild(startButton);
       } else if (type === "Word of the Day") {
-        fetch("https://api.quotable.io/random")
+        fetch("https://api.quotable.io/quotes/random")
           .then((response) => response.json())
           .then((data) => {
             const word = data.content.split(" ")[0] || "Serendipity";
