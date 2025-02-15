@@ -2,15 +2,15 @@
   "manifest_version": 3,
   "name": "AdFriend",
   "version": "1.0",
-  "description": "A Chrome extension that replaces ad elements with positive, interactive content widgets and refreshes local ZenQuotes data periodically.",
+  "description": "A Chrome extension that replaces ad elements with positive, interactive content widgets and refreshes data periodically.",
   "permissions": [
     "storage",
     "scripting",
     "activeTab"
   ],
+
   "host_permissions": [
     "<all_urls>",
-    "https://zenquotes.io/*",
     "https://adfriend-chrome-extension-backend.onrender.com/*"
   ],
   "content_scripts": [
@@ -22,5 +22,8 @@
   ],
   "action": {
     "default_popup": "options/index.html"
-  }
+  },
+  "background": {
+  "service_worker": "background.js"
+}
 }
