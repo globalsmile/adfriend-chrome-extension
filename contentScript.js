@@ -160,7 +160,7 @@
       contentContainer.innerHTML = ""; // Clear previous content.
 
       if (type === "Motivational Quote") {
-        fetch("https://api.quotable.io/random")
+        fetch("https://api.quotable.io/quotes/random")
           .then((response) => {
             if (!response.ok) {
               // If the response status is not OK, throw an error.
