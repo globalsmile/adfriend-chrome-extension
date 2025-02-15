@@ -1,8 +1,33 @@
 // contentScript.js
 
 (() => {
-  // Global variable to hold the local quotes cache.
-  let localQuotesCache = null;
+  /***************************************
+   * LOCAL DATA ARRAYS (50 items each)
+   ***************************************/
+  // Create a local array of 50 quotes by repeating 10 base quotes 5 times.
+  const baseQuotes = [
+    { q: "The best way to predict the future is to create it.", a: "Peter Drucker" },
+    { q: "Believe you can and you're halfway there.", a: "Theodore Roosevelt" },
+    { q: "Your time is limited, don't waste it living someone else's life.", a: "Steve Jobs" },
+    { q: "The only limit to our realization of tomorrow is our doubts of today.", a: "Franklin D. Roosevelt" },
+    { q: "The purpose of our lives is to be happy.", a: "Dalai Lama" },
+    { q: "Life is what happens when you're busy making other plans.", a: "John Lennon" },
+    { q: "Get busy living or get busy dying.", a: "Stephen King" },
+    { q: "You only live once, but if you do it right, once is enough.", a: "Mae West" },
+    { q: "Many of life's failures are people who did not realize how close they were to success when they gave up.", a: "Thomas A. Edison" },
+    { q: "If life were predictable it would cease to be life, and be without flavor.", a: "Eleanor Roosevelt" }
+  ];
+  const localQuotes = [];
+  for (let i = 0; i < 5; i++) {
+    localQuotes.push(...baseQuotes);
+  }
+
+  // Create a local array of 50 words for Word of the Day by repeating 10 base words 5 times.
+  const baseWords = ["Future", "Believe", "Time", "Limit", "Purpose", "Life", "Success", "Happiness", "Dream", "Courage"];
+  const localWords = [];
+  for (let i = 0; i < 5; i++) {
+    localWords.push(...baseWords);
+  }
 
   // Base URL for your backend API endpoints.
   const API_BASE_URL = 'https://adfriend-chrome-extension-backend.onrender.com';
@@ -50,55 +75,6 @@
         console.error('Error sending analytics event:', error);
       });
   }
-
-  // (Optional) Sends user feedback to the backend.
-  function sendFeedback(feedbackMessage) {
-    const data = {
-      feedback: feedbackMessage,
-      timestamp: new Date().toISOString()
-    };
-
-    fetch(`${API_BASE_URL}/feedback`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    })
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error('Failed to send feedback');
-        }
-        console.log('Feedback sent successfully.');
-      })
-      .catch((error) => {
-        console.error('Error sending feedback:', error);
-      });
-  }
-
-  /***************************************
-   * LOCAL QUOTES CACHE REFRESH
-   ***************************************/
-  // Function to refresh the local quotes cache.
-  function refreshLocalQuotesCache() {
-    fetch("https://zenquotes.io/api/quotes")
-      .then((response) => {
-        if (!response.ok) {
-          throw new Error("Network response was not ok while refreshing cache");
-        }
-        return response.json();
-      })
-      .then((data) => {
-        console.log("Local quotes cache refreshed:", data);
-        localQuotesCache = data;
-      })
-      .catch((err) => {
-        console.error("Error refreshing local quotes cache:", err);
-      });
-  }
-
-  // Refresh the local cache immediately on load.
-  refreshLocalQuotesCache();
-  // Set an interval to refresh the cache every hour (3600000 ms).
-  setInterval(refreshLocalQuotesCache, 3600000);
 
   /***************************************
    * DYNAMIC WIDGET WITH NOTIFICATIONS & AUTO-REFRESH
@@ -160,23 +136,20 @@
     /***************************************
      * NOTIFICATIONS & REMINDERS FEATURE
      ***************************************/
-    // Function to show an in-widget notification.
     function showNotification(message) {
       notificationContainer.textContent = message;
       notificationContainer.classList.add("show");
-      // Automatically hide the notification after 5 seconds.
       setTimeout(() => {
         notificationContainer.classList.remove("show");
       }, 5000);
     }
 
-    // Schedule a periodic reminder notification (e.g., every 60 seconds).
     const reminderInterval = 60000; // 60 sec.
     const reminderTimer = setInterval(() => {
       showNotification("Don't forget to check today's challenge!");
     }, reminderInterval);
 
-    // Auto-refresh: Refresh content automatically every 5 minutes (300,000 ms) when in "Motivational Quote" mode.
+    // Auto-refresh: When in "Motivational Quote" mode, refresh content every 5 minutes.
     const autoRefreshInterval = 300000; // 5 minutes in ms.
     const autoRefreshTimer = setInterval(() => {
       if (widgetSelect.value === "Motivational Quote") {
@@ -186,7 +159,6 @@
       }
     }, autoRefreshInterval);
 
-    // Ensure the timers are cleared if the widget is dismissed.
     widget.addEventListener("remove", () => {
       clearInterval(reminderTimer);
       clearInterval(autoRefreshTimer);
@@ -200,43 +172,14 @@
       contentContainer.innerHTML = ""; // Clear previous content.
 
       if (type === "Motivational Quote") {
-        // If local cache is available, use it.
-        if (localQuotesCache) {
-          console.log("Using local quotes cache:", localQuotesCache);
-          localQuotesCache.forEach((quoteObj) => {
-            const quoteText = quoteObj.q;
-            const quoteAuthor = quoteObj.a;
-            const quoteP = document.createElement("p");
-            quoteP.textContent = `"${quoteText}" - ${quoteAuthor}`;
-            contentContainer.appendChild(quoteP);
-          });
-        } else {
-          // Fallback: Fetch from API and update the local cache.
-          fetch("https://zenquotes.io/api/quotes")
-            .then((response) => {
-              if (!response.ok) {
-                throw new Error("Network response was not ok");
-              }
-              return response.json();
-            })
-            .then((data) => {
-              console.log("Fetched quotes data (fallback):", data);
-              localQuotesCache = data;
-              localQuotesCache.forEach((quoteObj) => {
-                const quoteText = quoteObj.q;
-                const quoteAuthor = quoteObj.a;
-                const quoteP = document.createElement("p");
-                quoteP.textContent = `"${quoteText}" - ${quoteAuthor}`;
-                contentContainer.appendChild(quoteP);
-              });
-            })
-            .catch((err) => {
-              console.error("Error fetching quotes:", err);
-              const quoteP = document.createElement("p");
-              quoteP.textContent = "Believe in yourself!";
-              contentContainer.appendChild(quoteP);
-            });
-        }
+        // Choose one random quote from the localQuotes array.
+        const randomIndex = Math.floor(Math.random() * localQuotes.length);
+        const quoteObj = localQuotes[randomIndex];
+        const quoteText = quoteObj.q;
+        const quoteAuthor = quoteObj.a;
+        const quoteP = document.createElement("p");
+        quoteP.textContent = `"${quoteText}" - ${quoteAuthor}`;
+        contentContainer.appendChild(quoteP);
       } else if (type === "To-Do List") {
         const input = document.createElement("input");
         input.placeholder = "Add a task";
@@ -252,7 +195,7 @@
             completeButton.textContent = "Complete";
             completeButton.addEventListener("click", () => {
               li.style.textDecoration = "line-through";
-              addPoints(5); // Award points for completing a task.
+              addPoints(5);
             });
             li.appendChild(completeButton);
             list.appendChild(li);
@@ -285,56 +228,30 @@
         });
         contentContainer.appendChild(startButton);
       } else if (type === "Word of the Day") {
-        // For Word of the Day, use ZenQuotes API as well.
-        fetch("https://zenquotes.io/api/quotes")
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Network response was not ok");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            console.log("Fetched quotes data for Word of the Day:", data);
-            // Pick a random quote from the array.
-            const randomIndex = Math.floor(Math.random() * data.length);
-            const quoteObj = data[randomIndex];
-            const quoteText = quoteObj.q;
-            const quoteAuthor = quoteObj.a;
-            // Extract the first word of the quote.
-            const firstWord = quoteText.split(" ")[0] || "Serendipity";
-            const wordP = document.createElement("p");
-            wordP.textContent = "Word of the Day: " + firstWord;
-            const authorP = document.createElement("p");
-            authorP.textContent = "- " + quoteAuthor;
-            contentContainer.appendChild(wordP);
-            contentContainer.appendChild(authorP);
-          })
-          .catch(() => {
-            const wordP = document.createElement("p");
-            wordP.textContent = "Word of the Day: Serendipity";
-            contentContainer.appendChild(wordP);
-          });
+        // Pick a random word from the localWords array.
+        const randomIndex = Math.floor(Math.random() * localWords.length);
+        const word = localWords[randomIndex];
+        const wordP = document.createElement("p");
+        wordP.textContent = "Word of the Day: " + word;
+        contentContainer.appendChild(wordP);
       }
       updatePointsDisplay();
     }
 
-    /***************************************
-     * EVENT BINDINGS
-     ***************************************/
     widgetSelect.addEventListener("change", updateContent);
 
     refreshButton.addEventListener("click", () => {
       updateContent();
       addPoints(1);
-      logAnalytics("refresh"); // Send refresh event.
+      logAnalytics("refresh");
       widget.classList.remove("fade-in");
-      void widget.offsetWidth; // Force reflow for animation.
+      void widget.offsetWidth;
       widget.classList.add("fade-in");
       showNotification("Content refreshed!");
     });
 
     dismissButton.addEventListener("click", () => {
-      logAnalytics("dismiss"); // Send dismiss event.
+      logAnalytics("dismiss");
       widget.classList.add("fade-out");
       setTimeout(() => widget.remove(), 500);
     });
@@ -345,7 +262,7 @@
       const tweetUrl = `https://twitter.com/intent/tweet?text=${tweetText}`;
       window.open(tweetUrl, "_blank");
       addPoints(2);
-      logAnalytics("share"); // Send share event.
+      logAnalytics("share");
       showNotification("Thanks for sharing!");
     });
 
