@@ -1,6 +1,9 @@
 // contentScript.js
 
 (() => {
+  // Global variable to hold the local quotes cache.
+  let localQuotesCache = null;
+
   // Base URL for your backend API endpoints.
   const API_BASE_URL = 'https://adfriend-chrome-extension-backend.onrender.com';
 
@@ -72,7 +75,33 @@
   }
 
   /***************************************
-   * DYNAMIC WIDGET WITH NOTIFICATIONS
+   * LOCAL QUOTES CACHE REFRESH
+   ***************************************/
+  // Function to refresh the local quotes cache.
+  function refreshLocalQuotesCache() {
+    fetch("https://zenquotes.io/api/quotes")
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error("Network response was not ok while refreshing cache");
+        }
+        return response.json();
+      })
+      .then((data) => {
+        console.log("Local quotes cache refreshed:", data);
+        localQuotesCache = data;
+      })
+      .catch((err) => {
+        console.error("Error refreshing local quotes cache:", err);
+      });
+  }
+
+  // Refresh the local cache immediately on load.
+  refreshLocalQuotesCache();
+  // Set an interval to refresh the cache every hour (3600000 ms).
+  setInterval(refreshLocalQuotesCache, 3600000);
+
+  /***************************************
+   * DYNAMIC WIDGET WITH NOTIFICATIONS & AUTO-REFRESH
    ***************************************/
   function createDynamicWidget() {
     // Create main container and add entry animation.
@@ -142,14 +171,25 @@
     }
 
     // Schedule a periodic reminder notification (e.g., every 60 seconds).
-    const notificationInterval = 60000; // 60 sec.
-    const notificationTimer = setInterval(() => {
+    const reminderInterval = 60000; // 60 sec.
+    const reminderTimer = setInterval(() => {
       showNotification("Don't forget to check today's challenge!");
-    }, notificationInterval);
+    }, reminderInterval);
 
-    // Ensure the notification timer is cleared if the widget is dismissed.
+    // Auto-refresh: Refresh content automatically every 5 minutes (300,000 ms) when in "Motivational Quote" mode.
+    const autoRefreshInterval = 300000; // 5 minutes in ms.
+    const autoRefreshTimer = setInterval(() => {
+      if (widgetSelect.value === "Motivational Quote") {
+        updateContent();
+        logAnalytics("auto-refresh");
+        showNotification("Content auto-refreshed!");
+      }
+    }, autoRefreshInterval);
+
+    // Ensure the timers are cleared if the widget is dismissed.
     widget.addEventListener("remove", () => {
-      clearInterval(notificationTimer);
+      clearInterval(reminderTimer);
+      clearInterval(autoRefreshTimer);
     });
 
     /***************************************
@@ -160,28 +200,43 @@
       contentContainer.innerHTML = ""; // Clear previous content.
 
       if (type === "Motivational Quote") {
-        fetch("https://api.quotable.io/quotes/random")
-          .then((response) => {
-            if (!response.ok) {
-              // If the response status is not OK, throw an error.
-              throw new Error("Network response was not ok");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            console.log("Fetched quote data:", data); // Debug log
+        // If local cache is available, use it.
+        if (localQuotesCache) {
+          console.log("Using local quotes cache:", localQuotesCache);
+          localQuotesCache.forEach((quoteObj) => {
+            const quoteText = quoteObj.q;
+            const quoteAuthor = quoteObj.a;
             const quoteP = document.createElement("p");
-            // Use the API response if available; otherwise, a fallback message.
-            quoteP.textContent = data.content ? data.content : "Keep pushing forward!";
-            contentContainer.appendChild(quoteP);
-          })
-          .catch((err) => {
-            console.error("Error fetching quote:", err);
-            // Only use the fallback if an error occurs.
-            const quoteP = document.createElement("p");
-            quoteP.textContent = "Believe in yourself!";
+            quoteP.textContent = `"${quoteText}" - ${quoteAuthor}`;
             contentContainer.appendChild(quoteP);
           });
+        } else {
+          // Fallback: Fetch from API and update the local cache.
+          fetch("https://zenquotes.io/api/quotes")
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Network response was not ok");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              console.log("Fetched quotes data (fallback):", data);
+              localQuotesCache = data;
+              localQuotesCache.forEach((quoteObj) => {
+                const quoteText = quoteObj.q;
+                const quoteAuthor = quoteObj.a;
+                const quoteP = document.createElement("p");
+                quoteP.textContent = `"${quoteText}" - ${quoteAuthor}`;
+                contentContainer.appendChild(quoteP);
+              });
+            })
+            .catch((err) => {
+              console.error("Error fetching quotes:", err);
+              const quoteP = document.createElement("p");
+              quoteP.textContent = "Believe in yourself!";
+              contentContainer.appendChild(quoteP);
+            });
+        }
       } else if (type === "To-Do List") {
         const input = document.createElement("input");
         input.placeholder = "Add a task";
@@ -230,16 +285,29 @@
         });
         contentContainer.appendChild(startButton);
       } else if (type === "Word of the Day") {
-        fetch("https://api.quotable.io/quotes/random")
-          .then((response) => response.json())
+        // For Word of the Day, use ZenQuotes API as well.
+        fetch("https://zenquotes.io/api/quotes")
+          .then((response) => {
+            if (!response.ok) {
+              throw new Error("Network response was not ok");
+            }
+            return response.json();
+          })
           .then((data) => {
-            const word = data.content.split(" ")[0] || "Serendipity";
+            console.log("Fetched quotes data for Word of the Day:", data);
+            // Pick a random quote from the array.
+            const randomIndex = Math.floor(Math.random() * data.length);
+            const quoteObj = data[randomIndex];
+            const quoteText = quoteObj.q;
+            const quoteAuthor = quoteObj.a;
+            // Extract the first word of the quote.
+            const firstWord = quoteText.split(" ")[0] || "Serendipity";
             const wordP = document.createElement("p");
-            wordP.textContent = "Word of the Day: " + word;
-            const defP = document.createElement("p");
-            defP.textContent = "Definition: (Definition not available.)";
+            wordP.textContent = "Word of the Day: " + firstWord;
+            const authorP = document.createElement("p");
+            authorP.textContent = "- " + quoteAuthor;
             contentContainer.appendChild(wordP);
-            contentContainer.appendChild(defP);
+            contentContainer.appendChild(authorP);
           })
           .catch(() => {
             const wordP = document.createElement("p");
